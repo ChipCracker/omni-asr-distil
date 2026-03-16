@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=distil-s2
-#SBATCH --output=distil-s2_%j.out
-#SBATCH --error=distil-s2_%j.err
+#SBATCH --output=logs/distil-s2_%j.out
+#SBATCH --error=logs/distil-s2_%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
@@ -33,6 +33,7 @@ trap cleanup USR1
 
 # --- Setup ---
 cd /nfs1/scratch/students/witzlch88229/projects/omni-asr-distil || { echo "Directory not found"; exit 1; }
+mkdir -p logs
 
 unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_EXE CONDA_PYTHON_EXE CONDA_SHLVL
 PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/conda' | paste -sd ':')"
