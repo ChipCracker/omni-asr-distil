@@ -63,7 +63,8 @@ class DistillTrainUnit(TrainUnit[Seq2SeqBatch]):
     def process_batch(
         self, batch: Seq2SeqBatch, metric_bag: MetricBag
     ) -> tuple[Tensor, int]:
-        return self._criterion(batch, metric_bag)
+        total_loss, batch_size, _, _ = self._criterion(batch, metric_bag)
+        return total_loss, batch_size
 
     @override
     def process_metric_values(self, values: MutableMapping[str, object]) -> None:

@@ -17,6 +17,7 @@ from torch.nn.functional import ctc_loss, log_softmax
 from fairseq2.datasets import Seq2SeqBatch
 from fairseq2.metrics import Mean, MetricBag
 from fairseq2.models.wav2vec2.asr.model import Wav2Vec2AsrModel
+from fairseq2.nn import BatchLayout
 
 from .hidden_extractor import HiddenStateExtractor
 from .losses import DistillationLoss
@@ -61,11 +62,11 @@ class DistillCriterion:
         self,
         batch: Seq2SeqBatch,
         metric_bag: MetricBag,
-    ) -> tuple[Tensor, int]:
+    ) -> tuple[Tensor, int, Tensor, BatchLayout]:
         """Compute distillation loss for a batch.
 
         Returns:
-            Tuple of (total_loss, batch_size).
+            Tuple of (total_loss, batch_size, student_logits, student_logits_layout).
         """
         source_seqs, source_seqs_layout = batch.as_source_input()
         target_seqs, target_seqs_layout = batch.as_target_input()
@@ -122,7 +123,7 @@ class DistillCriterion:
         metric_bag.get("hid_cosine_loss", Mean).update(loss_dict["hid_cosine"], weight=n)
         metric_bag.get("distill_loss", Mean).update(loss_dict["total"], weight=n)
 
-        return total_loss, batch.batch_size
+        return total_loss, batch.batch_size, student_logits, student_logits_layout
 
     def process_metric_values(self, values: MutableMapping[str, object]) -> None:
         """Post-process metric values for logging (no-op for now)."""

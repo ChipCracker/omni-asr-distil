@@ -20,6 +20,7 @@ from fairseq2.datasets import Seq2SeqBatch, SyncMode
 from fairseq2.logging import log
 from fairseq2.metrics import MetricBag, format_as_float
 from fairseq2.metrics.recorders import MetricDescriptor
+from fairseq2.metrics.text import WerMetric
 from fairseq2.models.wav2vec2.asr.model import Wav2Vec2AsrModel
 from fairseq2.nn.utils.module import freeze_parameters, share_parameters
 from fairseq2.recipe.base import RecipeContext, TrainRecipe
@@ -47,6 +48,11 @@ from fairseq2.recipe.trainer import Trainer
 from typing_extensions import override
 
 from .dataset_config import Wav2Vec2AsrDatasetSelector, Wav2Vec2AsrDatasetSection
+
+from omnilingual_asr.workflows.recipes.wav2vec2.asr.wer_calculator import (
+    CerMetric,
+    WerCalculator,
+)
 
 from .data import register_distill_datasets
 from .distill_criterion import DistillCriterion
@@ -200,6 +206,7 @@ class DistillRecipe(TrainRecipe):
             ("distill_loss",    "Distill Loss"),
             ("kd_logit_loss",   "KD Logit Loss"),
             ("hid_cosine_loss", "Hidden Cosine Loss"),
+            ("cer",             "Character Error Rate (CER)"),
         ]:
             container.collection.register_instance(
                 MetricDescriptor,
@@ -372,8 +379,12 @@ class DistillRecipe(TrainRecipe):
                 projection_layers=proj_dict,
             )
 
+            wer_calculator = WerCalculator.from_context(context)
+
             for split in valid_splits:
-                valid_unit = DistillEvalUnit(valid_criterion, context.model)
+                valid_unit = DistillEvalUnit(
+                    valid_criterion, context.model, wer_calculator
+                )
                 valid_units.append(valid_unit)
 
                 task_config.batch_shuffle_window = 1
@@ -410,26 +421,48 @@ class DistillRecipe(TrainRecipe):
 
 @final
 class DistillEvalUnit(EvalUnit[Seq2SeqBatch]):
-    """Evaluation unit for distillation — computes combined loss on validation."""
+    """Evaluation unit for distillation — computes combined loss + WER/CER."""
 
     _criterion: DistillCriterion
     _model: RecipeModel
+    _wer_calculator: WerCalculator
 
-    def __init__(self, criterion: DistillCriterion, model: RecipeModel) -> None:
+    def __init__(
+        self,
+        criterion: DistillCriterion,
+        model: RecipeModel,
+        wer_calculator: WerCalculator,
+    ) -> None:
         self._criterion = criterion
         self._model = model
+        self._wer_calculator = wer_calculator
 
     @override
     def prepare_metric_bag(self, metric_bag: MetricBag) -> None:
         self._criterion.prepare_metric_bag(metric_bag)
+        metric_bag.add("wer", WerMetric())
+        metric_bag.add("cer", CerMetric())
 
     @override
     def process_batch(self, batch: Seq2SeqBatch, metric_bag: MetricBag) -> None:
-        self._criterion(batch, metric_bag)
+        _, _, student_logits, student_logits_layout = self._criterion(
+            batch, metric_bag
+        )
+        self._wer_calculator.compute_wer(
+            batch,
+            student_logits,
+            student_logits_layout,
+            None,   # context_logits (LLM only)
+            None,   # context_logit_layout (LLM only)
+            [],     # audio_embeddings (LLM only)
+            metric_bag,
+            None,   # llama_beam_search (greedy CTC decoding)
+        )
 
     @override
     def process_metric_values(self, values: MutableMapping[str, object]) -> None:
         self._criterion.process_metric_values(values)
+        self._wer_calculator.process_metric_values(values)
 
     @property
     @override
