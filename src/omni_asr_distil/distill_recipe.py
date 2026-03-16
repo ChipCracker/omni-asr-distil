@@ -281,13 +281,15 @@ class DistillRecipe(TrainRecipe):
     def create_trainer(self, context: RecipeContext) -> Trainer:
         config = context.config.as_(DistillRecipeConfig)
 
+        # Access context.model first — this lazily resolves RecipeModel,
+        # which triggers prepare_model() via the dependency system.
+        student = cast(Wav2Vec2AsrModel, context.model.base_module)
+
         assert self._teacher is not None, "prepare_model must be called before create_trainer"
         assert self._teacher_extractor is not None
         assert self._student_extractor is not None
         assert self._layer_mapping is not None
         assert self._projection_layers is not None
-
-        student = cast(Wav2Vec2AsrModel, context.model.base_module)
 
         # Build projection layers dict with int keys for the criterion
         proj_dict: dict[int, Linear] = {}
