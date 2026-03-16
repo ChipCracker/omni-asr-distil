@@ -190,9 +190,9 @@ class DistillRecipe(TrainRecipe):
 
     @override
     def register(self, container) -> None:
-        from omnilingual_asr import setup_fairseq2_extension
+        from fairseq2.composition.assets import register_package_assets
 
-        setup_fairseq2_extension(container)
+        register_package_assets(container, "omnilingual_asr.cards")
         register_distill_datasets(container)
         register_student_configs(container)
 
