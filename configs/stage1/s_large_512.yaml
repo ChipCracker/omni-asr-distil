@@ -70,4 +70,4 @@ regime:
   validate_every_n_steps: 200
   checkpoint_every_n_steps: 5_000
   publish_metrics_every_n_steps: 100
-  save_model_only: true
+  save_model_only: false
