@@ -29,21 +29,29 @@ elif [ -d "${OUTPUT_DIR}" ] && ls "${OUTPUT_DIR}"/step_* &>/dev/null; then
     exit 1
 fi
 
-# --- GPU-aware batch sizing ---
-# Scale max_num_elements to GPU VRAM; adjust grad accumulation to keep
-# effective batch size constant (~61.4M elements).
+# --- GPU & model-aware batch sizing ---
+# Scale max_num_elements to GPU VRAM and model size; adjust grad accumulation
+# to keep effective batch size constant (~61.4M elements).
+#                    | p4 (H200 141GB)  | p2 (A100 80GB)   | p1 (A100 40GB)
+# small  (256)       | 15.360.000 / 4   | 12.000.000 / 6   | 11.520.000 / 6
+# medium (384)       | 15.360.000 / 4   |  8.000.000 / 8   |  3.840.000 / 16
+# large  (512)       | 15.360.000 / 4   |  8.000.000 / 8   |  3.840.000 / 16
 case "${SLURM_JOB_PARTITION}" in
     p4)  # H200 141GB
         MAX_NUM_ELEMENTS=15360000
         NUM_BATCHES=4
         ;;
     p2)  # A100 80GB
-        MAX_NUM_ELEMENTS=8000000
-        NUM_BATCHES=8
+        case "${CONFIG_NAME}" in
+            s_small*)  MAX_NUM_ELEMENTS=12000000; NUM_BATCHES=6 ;;
+            *)         MAX_NUM_ELEMENTS=8000000;  NUM_BATCHES=8 ;;
+        esac
         ;;
     p1)  # A100 40GB
-        MAX_NUM_ELEMENTS=3840000
-        NUM_BATCHES=16
+        case "${CONFIG_NAME}" in
+            s_small*)  MAX_NUM_ELEMENTS=11520000; NUM_BATCHES=6 ;;
+            *)         MAX_NUM_ELEMENTS=3840000;  NUM_BATCHES=16 ;;
+        esac
         ;;
     *)
         echo "WARNING: Unknown partition '${SLURM_JOB_PARTITION}', using p4 defaults"

@@ -18,7 +18,6 @@ from typing_extensions import Self, override
 from fairseq2.data.tokenizers import TokenDecoder, Tokenizer
 from fairseq2.datasets import Seq2SeqBatch
 from fairseq2.metrics import MetricBag
-from fairseq2.metrics.text import WerMetric
 from fairseq2.nn import BatchLayout
 from fairseq2.nn.utils.padding import pad_seqs
 from fairseq2.utils.tensor import to_tensor
@@ -59,6 +58,43 @@ class CerMetric(Metric[Tensor]):
         return self
 
 
+@final
+class WerMetric(Metric[Tensor]):
+    """Word Error Rate metric."""
+
+    def __init__(self, *, device: torch.device | None = None) -> None:
+        super().__init__(device=device)
+        self.word_err: Tensor
+        self.word_len: Tensor
+        self._add_state("word_err", torch.zeros((), device=device, dtype=torch.int64))
+        self._add_state("word_len", torch.zeros((), device=device, dtype=torch.int64))
+
+    @override
+    @torch.inference_mode()
+    def update(self, refs: Sequence[str], hyps: Sequence[str]) -> Self:
+        for ref, hyp in zip(refs, hyps):
+            ref_words = ref.split()
+            hyp_words = hyp.split()
+            self.word_err += editdistance.eval(hyp_words, ref_words)
+            self.word_len += len(ref_words)
+        return self
+
+    @override
+    @torch.inference_mode()
+    def compute(self) -> Tensor:
+        if self.word_len:
+            return self.word_err * 100.0 / self.word_len
+        return to_tensor(-1.0, dtype=torch.float32)
+
+    @override
+    @torch.inference_mode()
+    def merge_state(self, metrics: Iterable[WerMetric]) -> Self:
+        for metric in metrics:
+            self.word_err += metric.word_err.to(self.device)
+            self.word_len += metric.word_len.to(self.device)
+        return self
+
+
 def greedy_ctc_decode(
     logits: Tensor,
     logit_layout: BatchLayout,
@@ -91,13 +127,5 @@ def compute_wer_cer(
     refs = [text_decoder(s) for s in ref_seqs]
     hyps = [text_decoder(s) for s in hyp_seqs]
 
-    _, ref_layout = batch.as_target_input()
-    metric_bag.get("wer", WerMetric).update(
-        refs,
-        ref_seqs.cpu(),
-        ref_layout,
-        hyps,
-        hyp_seqs.cpu(),
-        hyp_layout,
-    )
+    metric_bag.get("wer", WerMetric).update(refs, hyps)
     metric_bag.get("cer", CerMetric).update(refs, hyps)

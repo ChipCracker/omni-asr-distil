@@ -20,7 +20,7 @@ from fairseq2.datasets import Seq2SeqBatch, SyncMode
 from fairseq2.logging import log
 from fairseq2.metrics import MetricBag, format_as_float
 from fairseq2.metrics.recorders import MetricDescriptor
-from fairseq2.metrics.text import WerMetric
+from omni_asr_distil.wer_utils import WerMetric
 from fairseq2.models.wav2vec2.asr.model import Wav2Vec2AsrModel
 from fairseq2.nn.utils.module import freeze_parameters, share_parameters
 from fairseq2.recipe.base import RecipeContext, TrainRecipe
