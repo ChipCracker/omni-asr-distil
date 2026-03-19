@@ -21,8 +21,9 @@ CONFIG_NAME=$(basename "$CONFIG_FILE" .yaml)
 OUTPUT_DIR="/nfs1/scratch/students/witzlch88229/output/distil-stage2/${CONFIG_NAME}"
 
 # --- Resume check ---
-if [ "$RESUME" = "--resume" ]; then
-    echo "Resume mode: will continue from last checkpoint in ${OUTPUT_DIR}"
+# Auto-resume on Slurm requeue (preemption) or explicit --resume flag.
+if [ "$RESUME" = "--resume" ] || [ "${SLURM_RESTART_COUNT:-0}" -gt 0 ]; then
+    echo "Resume mode (restart_count=${SLURM_RESTART_COUNT:-0}): continuing from last checkpoint in ${OUTPUT_DIR}"
 elif [ -d "${OUTPUT_DIR}" ] && ls "${OUTPUT_DIR}"/step_* &>/dev/null; then
     echo "ERROR: Output directory ${OUTPUT_DIR} already contains checkpoints."
     echo "Use '--resume' as second argument to continue training, or remove the directory."
