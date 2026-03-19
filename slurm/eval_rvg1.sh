@@ -9,6 +9,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=10G
 #SBATCH --gres=gpu:1
+#SBATCH --qos=basic
 
 # --- Arguments ---
 ARCH=${1:?Usage: sbatch eval_rvg1.sh <arch> [split]}
