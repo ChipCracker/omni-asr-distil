@@ -20,6 +20,9 @@ DATASET=${3:-""}
 cd /nfs1/scratch/students/witzlch88229/projects/omni-asr-distil || { echo "Directory not found"; exit 1; }
 mkdir -p logs
 
+export TMPDIR="/nfs1/scratch/students/witzlch88229/tmp/${SLURM_JOB_ID}"
+mkdir -p "$TMPDIR"
+
 unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_EXE CONDA_PYTHON_EXE CONDA_SHLVL
 PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/conda' | paste -sd ':')"
 
