@@ -149,6 +149,20 @@ sbatch slurm/eval_rvg1.sh distill_s_small test /path/to/dataset/version=0
 # Columns: reference, hypothesis, wer, cer
 ```
 
+#### Batch Evaluation (alle Modelle × ORT/TR2)
+
+```bash
+bash scripts/eval_stage1_all.sh
+```
+
+#### LaTeX-Tabelle generieren
+
+```bash
+python scripts/generate_latex_table.py
+```
+
+Gibt die fertige `tab:distil_stage1` Tabelle für die Thesis aus (WER/CER auf BAS-RVG1 ORT + TR2).
+
 ## Key Design Decisions
 
 ### fairseq2 Integration
