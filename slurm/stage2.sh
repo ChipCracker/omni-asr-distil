@@ -6,7 +6,7 @@
 #SBATCH --partition=p4
 #SBATCH --time=20:00:00
 #SBATCH --cpus-per-task=12
-#SBATCH --mem-per-cpu=40G
+#SBATCH --mem-per-cpu=10G
 #SBATCH --qos=gpuultimate
 #SBATCH --requeue
 #SBATCH --signal=B:USR1@120
