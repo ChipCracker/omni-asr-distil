@@ -87,9 +87,6 @@ mkdir -p "$TMPDIR"
 unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_EXE CONDA_PYTHON_EXE CONDA_SHLVL
 PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/conda' | paste -sd ':')"
 
-export TQDM_MONITOR_INTERVAL=0   # Disable tqdm monitor thread (fork-safety with torchrun)
-export PYTHONNOUSERSITE=1        # Prevent anaconda site-packages contamination
-
 source .venv/bin/activate
 
 echo "=================================================================="
@@ -102,21 +99,13 @@ echo "GPUs: ${NUM_GPUS} | max_num_elements: ${MAX_NUM_ELEMENTS} | grad_accum: ${
 echo "=================================================================="
 
 # --- Launch training (background, so trap can fire) ---
-TRAIN_CMD="scripts/run_stage2.py $OUTPUT_DIR \
-    --config-file ${CONFIG_FILE} \
-    --config model.path=${STAGE1_MODEL} \
-              teacher.path=${STAGE1_MODEL} \
-              dataset.asr_task_config.max_num_elements=${MAX_NUM_ELEMENTS} \
-              trainer.grad_accumulation.num_batches=${NUM_BATCHES}"
-
-if [ "$NUM_GPUS" -gt 1 ]; then
-    torchrun --nproc_per_node="${NUM_GPUS}" \
-        --start_method=spawn \
-        --master_addr="$(hostname)" \
-        --master_port=29500 \
-        ${TRAIN_CMD} &
-else
-    python ${TRAIN_CMD} &
-fi
+# fairseq2 auto-detects SLURM and sets RANK/WORLD_SIZE/MASTER_ADDR internally.
+# Use srun to launch one process per GPU (no torchrun needed).
+srun python scripts/run_stage2.py "$OUTPUT_DIR" \
+    --config-file "${CONFIG_FILE}" \
+    --config model.path="${STAGE1_MODEL}" \
+              teacher.path="${STAGE1_MODEL}" \
+              dataset.asr_task_config.max_num_elements="${MAX_NUM_ELEMENTS}" \
+              trainer.grad_accumulation.num_batches="${NUM_BATCHES}" &
 TRAIN_PID=$!
 wait "$TRAIN_PID"
