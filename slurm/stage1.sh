@@ -79,7 +79,9 @@ export TMPDIR="/nfs1/scratch/students/witzlch88229/tmp/${SLURM_JOB_ID}"
 mkdir -p "$TMPDIR"
 
 unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_EXE CONDA_PYTHON_EXE CONDA_SHLVL
-PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/conda' | paste -sd ':')"
+unset PYTHONPATH PYTHONHOME
+PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/conda\|/anaconda' | paste -sd ':')"
+LD_LIBRARY_PATH="$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v '/conda\|/anaconda' | paste -sd ':')"
 
 source .venv/bin/activate
 
