@@ -101,11 +101,13 @@ echo "GPUs: ${NUM_GPUS} | max_num_elements: ${MAX_NUM_ELEMENTS} | grad_accum: ${
 echo "=================================================================="
 
 # --- Launch training (background, so trap can fire) ---
-# fairseq2 auto-detects SLURM and sets RANK/WORLD_SIZE/MASTER_ADDR internally.
-# Use srun to launch one process per GPU (no torchrun needed).
+# Env vars are set in run_stage2.py from SLURM_PROCID etc.
+# common.cluster=none disables fairseq2's SlurmHandler (which breaks NCCL
+# by restricting CUDA_VISIBLE_DEVICES to one GPU per process).
 srun python scripts/run_stage2.py "$OUTPUT_DIR" \
     --config-file "${CONFIG_FILE}" \
-    --config model.path="${STAGE1_MODEL}" \
+    --config common.cluster=none \
+              model.path="${STAGE1_MODEL}" \
               teacher.path="${STAGE1_MODEL}" \
               dataset.asr_task_config.max_num_elements="${MAX_NUM_ELEMENTS}" \
               trainer.grad_accumulation.num_batches="${NUM_BATCHES}" &
