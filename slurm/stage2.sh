@@ -117,7 +117,7 @@ echo "=================================================================="
 if [ "$NUM_GPUS" -gt 1 ]; then
     # torchrun for multi-GPU. common.cluster=none disables fairseq2's SlurmHandler
     # (which restricts CUDA_VISIBLE_DEVICES and breaks NCCL).
-    torchrun --nproc_per_node="${NUM_GPUS}" \
+    python -m torch.distributed.run --nproc_per_node="${NUM_GPUS}" \
         scripts/run_stage2.py "$OUTPUT_DIR" \
         --config-file "${CONFIG_FILE}" \
         --config common.cluster=none \
