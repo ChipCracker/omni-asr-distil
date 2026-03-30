@@ -101,15 +101,26 @@ echo "GPUs: ${NUM_GPUS} | max_num_elements: ${MAX_NUM_ELEMENTS} | grad_accum: ${
 echo "=================================================================="
 
 # --- Launch training (background, so trap can fire) ---
-# Env vars are set in run_stage2.py from SLURM_PROCID etc.
+# Use torchrun for multi-GPU (sets RANK/WORLD_SIZE/LOCAL_RANK automatically).
 # common.cluster=none disables fairseq2's SlurmHandler (which breaks NCCL
 # by restricting CUDA_VISIBLE_DEVICES to one GPU per process).
-srun python scripts/run_stage2.py "$OUTPUT_DIR" \
-    --config-file "${CONFIG_FILE}" \
-    --config common.cluster=none \
-              model.path="${STAGE1_MODEL}" \
-              teacher.path="${STAGE1_MODEL}" \
-              dataset.asr_task_config.max_num_elements="${MAX_NUM_ELEMENTS}" \
-              trainer.grad_accumulation.num_batches="${NUM_BATCHES}" &
+# tqdm TMonitor is patched in run_stage2.py to prevent GIL crash.
+if [ "$NUM_GPUS" -gt 1 ]; then
+    torchrun --nproc_per_node="${NUM_GPUS}" \
+        scripts/run_stage2.py "$OUTPUT_DIR" \
+        --config-file "${CONFIG_FILE}" \
+        --config common.cluster=none \
+                  model.path="${STAGE1_MODEL}" \
+                  teacher.path="${STAGE1_MODEL}" \
+                  dataset.asr_task_config.max_num_elements="${MAX_NUM_ELEMENTS}" \
+                  trainer.grad_accumulation.num_batches="${NUM_BATCHES}" &
+else
+    python scripts/run_stage2.py "$OUTPUT_DIR" \
+        --config-file "${CONFIG_FILE}" \
+        --config model.path="${STAGE1_MODEL}" \
+                  teacher.path="${STAGE1_MODEL}" \
+                  dataset.asr_task_config.max_num_elements="${MAX_NUM_ELEMENTS}" \
+                  trainer.grad_accumulation.num_batches="${NUM_BATCHES}" &
+fi
 TRAIN_PID=$!
 wait "$TRAIN_PID"
