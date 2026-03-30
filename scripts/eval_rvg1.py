@@ -28,7 +28,8 @@ from fairseq2.nn import BatchLayout
 from omni_asr_distil.student_config import _base_student
 from omni_asr_distil.wer_utils import greedy_ctc_decode
 
-OUTPUT_BASE = Path("/nfs1/scratch/students/witzlch88229/output/distil-stage1")
+STAGE1_OUTPUT = Path("/nfs1/scratch/students/witzlch88229/output/distil-stage1")
+STAGE2_OUTPUT = Path("/nfs1/scratch/students/witzlch88229/output/distil-stage2")
 
 DEFAULT_DATASET = Path(
     "/nfs1/scratch/students/witzlch88229/data/omni-asr-ft/rvg1_de/version=0"
@@ -45,15 +46,19 @@ ARCH_MAP: dict[str, tuple[str, Wav2Vec2AsrConfig]] = {
 }
 
 
-def find_latest_checkpoint(arch: str, output_base: Path | None = None) -> Path:
+def find_latest_checkpoint(
+    arch: str,
+    stage2_config: str | None = None,
+    output_dir_override: Path | None = None,
+) -> Path:
     """Find the highest step_* checkpoint across all ws_* workspaces."""
-    if output_base is not None:
-        # Explicit output dir (e.g. stage2): search directly, no arch subdirectory
-        output_dir = output_base
+    if output_dir_override is not None:
+        output_dir = output_dir_override
+    elif stage2_config is not None:
+        output_dir = STAGE2_OUTPUT / stage2_config
     else:
-        # Default (stage1): append arch config name as subdirectory
         config_name = ARCH_MAP[arch][0]
-        output_dir = OUTPUT_BASE / config_name
+        output_dir = STAGE1_OUTPUT / config_name
 
     # fairseq2 stores checkpoints in ws_*/checkpoints/step_*/
     step_dirs = sorted(
@@ -111,10 +116,15 @@ def main() -> None:
         help="Path to parquet dataset (default: rvg1_de)",
     )
     parser.add_argument(
+        "--stage2-config",
+        default=None,
+        help="Stage 2 config name (e.g. stream_dct_large). Auto-discovers checkpoint in distil-stage2/<name>/",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
-        help="Output base dir to search for checkpoints (default: distil-stage1)",
+        help="Explicit output dir to search for checkpoints (overrides auto-discovery)",
     )
     parser.add_argument(
         "--device", default="cuda" if torch.cuda.is_available() else "cpu"
@@ -125,7 +135,7 @@ def main() -> None:
     dataset_path = args.dataset
 
     # --- Find and load checkpoint ---
-    checkpoint_dir = find_latest_checkpoint(args.arch, args.output_dir)
+    checkpoint_dir = find_latest_checkpoint(args.arch, args.stage2_config, args.output_dir)
     print(f"Checkpoint: {checkpoint_dir}")
 
     model = load_model(args.arch, checkpoint_dir, device)

@@ -12,10 +12,10 @@
 #SBATCH --qos=basic
 
 # --- Arguments ---
-ARCH=${1:?Usage: sbatch eval_rvg1.sh <arch> [split] [dataset_path] [output_dir]}
+ARCH=${1:?Usage: sbatch eval_rvg1.sh <arch> [split] [dataset_path] [stage2_config]}
 SPLIT=${2:-"test"}
 DATASET=${3:-""}
-OUTPUT_DIR_OVERRIDE=${4:-""}
+STAGE2_CONFIG=${4:-""}
 
 # --- Setup ---
 cd /nfs1/scratch/students/witzlch88229/projects/omni-asr-distil || { echo "Directory not found"; exit 1; }
@@ -35,8 +35,8 @@ EXTRA_ARGS=""
 if [ -n "${DATASET}" ]; then
     EXTRA_ARGS="--dataset ${DATASET}"
 fi
-if [ -n "${OUTPUT_DIR_OVERRIDE}" ]; then
-    EXTRA_ARGS="${EXTRA_ARGS} --output-dir ${OUTPUT_DIR_OVERRIDE}"
+if [ -n "${STAGE2_CONFIG}" ]; then
+    EXTRA_ARGS="${EXTRA_ARGS} --stage2-config ${STAGE2_CONFIG}"
 fi
 
 echo "=================================================================="
