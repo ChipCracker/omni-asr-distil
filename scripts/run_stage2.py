@@ -6,6 +6,10 @@ The config YAML should specify streaming.chunk_sizes, streaming.causal_conv, etc
 
 import os
 
+# Disable tqdm completely to prevent GIL crash from its monitor thread
+# (uses /opt/anaconda3 threading.py which is incompatible with multi-process)
+os.environ["TQDM_DISABLE"] = "1"
+
 # Map SLURM env vars to PyTorch distributed before fairseq2 import.
 # fairseq2's SlurmHandler sets CUDA_VISIBLE_DEVICES per rank which breaks
 # NCCL on clusters that need all GPUs visible. We set the vars manually
