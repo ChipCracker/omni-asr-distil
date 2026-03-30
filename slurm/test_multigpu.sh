@@ -8,7 +8,9 @@
 #SBATCH --gpus-per-task=1
 #SBATCH --partition=p4
 #SBATCH --time=0:10:00
-#SBATCH --qos=preemptible
+#SBATCH --cpus-per-task=12
+#SBATCH --mem-per-cpu=10G
+#SBATCH --qos=gpuultimate
 
 cd /nfs1/scratch/students/witzlch88229/projects/omni-asr-distil || exit 1
 mkdir -p logs
