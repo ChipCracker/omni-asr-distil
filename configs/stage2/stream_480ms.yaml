@@ -79,3 +79,4 @@ regime:
   checkpoint_every_n_steps: 2_000
   publish_metrics_every_n_steps: 100
   save_model_only: false
+  keep_last_n_checkpoints: 1

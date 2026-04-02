@@ -158,6 +158,7 @@ class DistillRecipeConfig:
             validate_every_n_steps=2_000,
             publish_metrics_every_n_steps=100,
             checkpoint_every_n_steps=5_000,
+            keep_last_n_checkpoints=1,
         )
     )
 
