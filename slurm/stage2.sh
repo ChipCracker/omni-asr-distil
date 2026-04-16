@@ -3,10 +3,13 @@
 #SBATCH --output=logs/distil-s2_%j.out
 #SBATCH --error=logs/distil-s2_%j.err
 #SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --ntasks-per-node=1
 #SBATCH --partition=p4
 #SBATCH --time=20:00:00
 #SBATCH --cpus-per-task=12
 #SBATCH --mem-per-cpu=10G
+#SBATCH --gres=gpu:1
 #SBATCH --qos=gpuultimate
 #SBATCH --requeue
 #SBATCH --signal=B:USR1@120
