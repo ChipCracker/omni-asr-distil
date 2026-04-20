@@ -88,3 +88,16 @@ python scripts/run_stage2.py "$OUTPUT_DIR" \
               trainer.grad_accumulation.num_batches="${NUM_BATCHES}" &
 TRAIN_PID=$!
 wait "$TRAIN_PID"
+EXIT_CODE=$?
+
+# --- Self-requeue on failure (OOM, crash) ---
+# SLURM's --requeue only triggers on preemption/node failure, not on non-zero exits.
+# Cap restarts to avoid infinite loops (e.g. config error).
+MAX_AUTO_RESTARTS=10
+RESTART_COUNT="${SLURM_RESTART_COUNT:-0}"
+if [ "$EXIT_CODE" -ne 0 ] && [ "$RESTART_COUNT" -lt "$MAX_AUTO_RESTARTS" ]; then
+    echo "$(date): training exited with code $EXIT_CODE (restart ${RESTART_COUNT}/${MAX_AUTO_RESTARTS}) — requeuing job ${SLURM_JOB_ID}"
+    scontrol requeue "${SLURM_JOB_ID}"
+    exit 0
+fi
+exit "$EXIT_CODE"
